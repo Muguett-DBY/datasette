@@ -4,6 +4,7 @@ on:
   push:
     branches:
     - main
+    - ci/json-object-primary-keys
   pull_request:
   workflow_dispatch:
 
