@@ -3,6 +3,7 @@
 Linux, disposable databases only. This does not reproduce a dashboard plugin,
 Docker Compose stack or the original reporter's unspecified pipeline.
 """
+
 import asyncio
 from contextlib import closing
 import hashlib
@@ -18,7 +19,9 @@ import tempfile
 from datasette.app import Datasette
 from datasette.database import Database
 
-EXPECTED_DATABASE_SHA256 = 'fb8dd9ef75f91790f5ca7483b76be02048d9568f763aa9d13dc0f478230b89ac'
+EXPECTED_DATABASE_SHA256 = (
+    "fb8dd9ef75f91790f5ca7483b76be02048d9568f763aa9d13dc0f478230b89ac"
+)
 
 
 def create_database(path, value):
@@ -52,7 +55,10 @@ async def main():
     assert importlib.metadata.version("datasette") == "0.65.5"
     module_file = Path(inspect.getfile(Database))
     actual_hash = hashlib.sha256(module_file.read_bytes()).hexdigest()
-    assert actual_hash == EXPECTED_DATABASE_SHA256, (actual_hash, EXPECTED_DATABASE_SHA256)
+    assert actual_hash == EXPECTED_DATABASE_SHA256, (
+        actual_hash,
+        EXPECTED_DATABASE_SHA256,
+    )
     report = {
         "python": sys.version.split()[0],
         "platform": sys.platform,
@@ -60,7 +66,9 @@ async def main():
         "sqlite": sqlite3.sqlite_version,
         "databaseSourceSha256": actual_hash,
     }
-    with tempfile.TemporaryDirectory(prefix="datasette-replacement-control-") as directory:
+    with tempfile.TemporaryDirectory(
+        prefix="datasette-replacement-control-"
+    ) as directory:
         root = Path(directory)
         path = root / "transaction.db"
         create_database(path, "old")
@@ -74,7 +82,12 @@ async def main():
             after = [await values(db) for _ in range(3)]
             assert old == ["old"] and after == [["committed"]] * 3
             assert path.stat().st_ino == inode
-            report["inPlaceTransaction"] = {"before": old, "after": after, "sameInode": True, "mutable": db.is_mutable}
+            report["inPlaceTransaction"] = {
+                "before": old,
+                "after": after,
+                "sameInode": True,
+                "mutable": db.is_mutable,
+            }
         finally:
             stop(ds, db)
 
@@ -94,12 +107,21 @@ async def main():
             assert old == ["old"] and after == [["old"]] * 3
             assert path.stat().st_ino != inode
             with closing(sqlite3.connect(f"file:{path}?mode=ro", uri=True)) as conn:
-                fresh_sqlite = [row[0] for row in conn.execute("select value from items")]
+                fresh_sqlite = [
+                    row[0] for row in conn.execute("select value from items")
+                ]
             fresh_ds = Datasette([str(path)], settings={"num_sql_threads": 1})
             fresh_db = fresh_ds.get_database("replaced")
             fresh_datasette = await values(fresh_db)
             assert fresh_sqlite == fresh_datasette == ["replacement"]
-            report["fileReplacement"] = {"before": old, "existingPoolAfter": after, "newSQLiteConnection": fresh_sqlite, "newDatasettePool": fresh_datasette, "sameInode": False, "mutable": db.is_mutable}
+            report["fileReplacement"] = {
+                "before": old,
+                "existingPoolAfter": after,
+                "newSQLiteConnection": fresh_sqlite,
+                "newDatasettePool": fresh_datasette,
+                "sameInode": False,
+                "mutable": db.is_mutable,
+            }
         finally:
             if fresh_ds is not None:
                 stop(fresh_ds, fresh_db)
