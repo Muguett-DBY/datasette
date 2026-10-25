@@ -1,0 +1,54 @@
+{
+  "name": "Database replacement control",
+  "on": {
+    "push": {
+      "branches": [
+        "probe/database-replacement-2026-10-26"
+      ],
+      "paths": [
+        ".github/workflows/probe-database-replacement.yml",
+        "validation/database_replacement.py"
+      ]
+    },
+    "workflow_dispatch": {}
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "jobs": {
+    "datasette-database-api": {
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 10,
+      "env": {
+        "PYTHONDONTWRITEBYTECODE": "1"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+          "with": {
+            "fetch-depth": 0,
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@v5",
+          "with": {
+            "python-version": "3.12"
+          }
+        },
+        {
+          "name": "Install only on this ephemeral Linux runner",
+          "run": "python -m pip install --disable-pip-version-check --no-cache-dir datasette==0.65.5"
+        },
+        {
+          "name": "Check the release source was not modified",
+          "run": "git merge-base --is-ancestor fec885fb291ffc05c80f15c5f20bb3bb67719320 HEAD\ngit diff --exit-code fec885fb291ffc05c80f15c5f20bb3bb67719320 HEAD -- datasette setup.py setup.cfg pyproject.toml"
+        },
+        {
+          "name": "Compare SQL commits and replacing a file with active read connections",
+          "run": "python -B validation/database_replacement.py"
+        }
+      ]
+    }
+  }
+}
